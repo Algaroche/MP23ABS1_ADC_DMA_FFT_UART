@@ -131,9 +131,9 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 	int16_t FFT_filtrada[ADC_BUF_LEN];
+	float alpha = 0.05;
 	int16_t FFT_now[ADC_BUF_LEN];
-	int16_t toSend[ADC_BUF_LEN+1];
-	//float suma_ant, media;
+	int16_t toSend[ADC_BUF_LEN+1+1];
 	char msg[30];
 
 	while (1)
@@ -150,85 +150,90 @@ int main(void)
 			AUDIO_FFT_Data_Input(adc_buf, ADC_BUF_LEN, &audio_fft_M1);
 			AUDIO_FFT_Process(&audio_fft_M1, FFT_Out);
 
-			float suma = 0.0;
+//			float suma = 0.0;
 			int j=0;
 			for (int i = 0; i<(ADC_BUF_LEN); i++){
-				FFT_now[i] = 20 * log(FFT_Out[i]/256);
-				FFT_filtrada[i] = (alpha * FFT_now[i]) + ((1 - alpha) * FFT_filtrada[i]);
+//				FFT_now[i] = 20 * log(FFT_Out[i]/256);
+				FFT_filtrada[i] = (alpha *(20 * log(FFT_Out[i]/256))) + ((1 - alpha) * FFT_filtrada[i]);
 
-				suma = suma + prueba[i];
+//				suma = suma + prueba[i];
 			}
 //			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_RESET);
 
 			//media = (suma + suma_ant) / 2;
 			//suma_ant = suma;
 
-			switch (estado){
-			case apagados:
-				if ((suma<-107000.0f) & (suma>-110000.0f)){
-					estado = principal_normal;
-					strcpy(msg, "Principal Normal\r\n");
-				}
-				else if ((suma<-120000.0f) & (suma>-123000.0f)){
-					estado = alimentacion_normal;
-					strcpy(msg, "Alimentacion Normal\r\n");
-				}
-				else
-					strcpy(msg, "Apagados\r\n");
-				break;
-
-			case principal_normal:
-				if ((suma<-97000.0f) & (suma>-102000.0f)){
-					estado = principal_maximo;
-					strcpy(msg, "Principal Maximo\r\n");
-				}
-				else if (suma<-130000.0f){
-					estado = apagados;
-					strcpy(msg, "Apagados\r\n");
-				}
-				else
-					strcpy(msg, "Principal Normal\r\n");
-				break;
-
-			case principal_maximo:
-				if (suma<-109000.0f){
-					estado = principal_normal;
-					strcpy(msg, "Principal Normal\r\n");
-				}
-				else
-					strcpy(msg, "Principal Maximo\r\n");
-				break;
-
-			case alimentacion_normal:
-				if ((suma<-103000.0f) & (suma>-106000.0f)){
-					estado = alimentacion_maximo;
-					strcpy(msg, "Alimentacion Maximo\r\n");
-				}
-				else if (suma<-130000.0f){
-					estado = apagados;
-					strcpy(msg, "Apagados\r\n");
-				}
-				else
-					strcpy(msg, "Alimentacion Normal\r\n");
-				break;
-
-			case alimentacion_maximo:
-				if (suma<-120000.0f){
-					estado = alimentacion_normal;
-					strcpy(msg, "Alimentacion Normal\r\n");
-				}
-				else
-					strcpy(msg, "Alimentacion Maximo\r\n");
-				break;
-
-			}
+//			switch (estado){
+//			case apagados:
+//				if ((suma<-107000.0f) & (suma>-110000.0f)){
+//					estado = principal_normal;
+//					strcpy(msg, "Principal Normal\r\n");
+//				}
+//				else if ((suma<-120000.0f) & (suma>-123000.0f)){
+//					estado = alimentacion_normal;
+//					strcpy(msg, "Alimentacion Normal\r\n");
+//				}
+//				else
+//					strcpy(msg, "Apagados\r\n");
+//				break;
+//
+//			case principal_normal:
+//				if ((suma<-97000.0f) & (suma>-102000.0f)){
+//					estado = principal_maximo;
+//					strcpy(msg, "Principal Maximo\r\n");
+//				}
+//				else if (suma<-130000.0f){
+//					estado = apagados;
+//					strcpy(msg, "Apagados\r\n");
+//				}
+//				else
+//					strcpy(msg, "Principal Normal\r\n");
+//				break;
+//
+//			case principal_maximo:
+//				if (suma<-109000.0f){
+//					estado = principal_normal;
+//					strcpy(msg, "Principal Normal\r\n");
+//				}
+//				else
+//					strcpy(msg, "Principal Maximo\r\n");
+//				break;
+//
+//			case alimentacion_normal:
+//				if ((suma<-103000.0f) & (suma>-106000.0f)){
+//					estado = alimentacion_maximo;
+//					strcpy(msg, "Alimentacion Maximo\r\n");
+//				}
+//				else if (suma<-130000.0f){
+//					estado = apagados;
+//					strcpy(msg, "Apagados\r\n");
+//				}
+//				else
+//					strcpy(msg, "Alimentacion Normal\r\n");
+//				break;
+//
+//			case alimentacion_maximo:
+//				if (suma<-120000.0f){
+//					estado = alimentacion_normal;
+//					strcpy(msg, "Alimentacion Normal\r\n");
+//				}
+//				else
+//					strcpy(msg, "Alimentacion Maximo\r\n");
+//				break;
+//
+//			}
 
 			//HAL_UART_Transmit(&huart2, &msg, strlen(msg), 100000000);
 
-			toSend[0] = 0x3e3e;
-			memcpy(&toSend[1], &prueba, sizeof(prueba));
+			//Genera el mensaje a enviar
+			toSend[0] = 0x3e3e;											//CABECERA
+			memcpy(&toSend[1], &FFT_filtrada, sizeof(FFT_filtrada));	//PAYLOAD
+			int16_t BCC_CRC = 0;
+			for (int i = 1; i <= (ADC_BUF_LEN); i++)
+				BCC_CRC ^= toSend[i];									//CRC
+			toSend[ADC_BUF_LEN+1]=BCC_CRC;
 			HAL_UART_Transmit(&huart2, &toSend, sizeof(toSend), 100000000);
-			HAL_Delay(100);
+			HAL_Delay(1);
 
 //			CDC_Transmit_FS(&msg, strlen(msg));
 //			HAL_Delay(1);

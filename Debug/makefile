@@ -58,8 +58,8 @@ all: main-build
 main-build: rsense-micro-adc-dma.elf secondary-outputs
 
 # Tool invocations
-rsense-micro-adc-dma.elf: $(OBJS) $(USER_OBJS) D:\Alberto\Documents\STM32CubeIDE\rsense-micro-adc-dma\STM32L4R9ZIJX_FLASH.ld
-	arm-none-eabi-gcc -o "rsense-micro-adc-dma.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"D:\Alberto\Documents\STM32CubeIDE\rsense-micro-adc-dma\STM32L4R9ZIJX_FLASH.ld" --specs=nosys.specs -Wl,-Map="rsense-micro-adc-dma.map" -Wl,--gc-sections -static -L"D:\Alberto\Documents\STM32CubeIDE\rsense-micro-adc-dma\lib" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+rsense-micro-adc-dma.elf: $(OBJS) $(USER_OBJS) D:\Alberto\Documents\GIT\MP23ABS1_ADC_DMA_FFT_UART\STM32L4R9ZIJX_FLASH.ld
+	arm-none-eabi-gcc -o "rsense-micro-adc-dma.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"D:\Alberto\Documents\GIT\MP23ABS1_ADC_DMA_FFT_UART\STM32L4R9ZIJX_FLASH.ld" --specs=nosys.specs -Wl,-Map="rsense-micro-adc-dma.map" -Wl,--gc-sections -static -L"D:\Alberto\Documents\STM32CubeIDE\rsense-micro-adc-dma\lib" --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

@@ -75,9 +75,6 @@ AUDIO_FFT_instance_t audio_fft_M1;
 /* USER CODE BEGIN 0 */
 uint8_t completo = 0;
 float * FFT_Out;
-float * FFT_Average;
-enum ms_t {apagados, principal_normal, principal_maximo, alimentacion_normal, alimentacion_maximo};
-enum ms_t estado;
 /* USER CODE END 0 */
 
 /**
@@ -87,7 +84,7 @@ enum ms_t estado;
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-	estado = apagados;
+
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -116,7 +113,7 @@ int main(void)
 	//	HAL_DMA_RegisterCallback(&hdma_usart2_tx, HAL_DMA_XFER_CPLT_CB_ID, &DMATransferComplete);
 	HAL_ADC_Start_DMA(&hadc1, (int32_t*)adc_buf, ADC_BUF_LEN);
 
-	audio_fft_M1.sampling_frequency = 133333; 					//66667; //
+	audio_fft_M1.sampling_frequency = 133333; 			//66667; //
 	audio_fft_M1.FFT_len = 1024;
 	audio_fft_M1.overlap = 0.5f;
 	audio_fft_M1.win_type = AUDIO_FTT_HANNING_WIN;
@@ -125,16 +122,15 @@ int main(void)
 
 	/* Allocate output buffer */
 	FFT_Out = calloc(audio_fft_M1.FFT_len / 2, sizeof(float));
-	FFT_Average = calloc(audio_fft_M1.FFT_len / 2, sizeof(float));
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 	int16_t FFT_filtrada[ADC_BUF_LEN];
 	float alpha = 0.05;
-	int16_t FFT_now[ADC_BUF_LEN];
-	int16_t toSend[ADC_BUF_LEN+1+1];
-	char msg[30];
+//	int16_t FFT_now[ADC_BUF_LEN];
+	int16_t toSend[ADC_BUF_LEN+1+1];		//PAYLOAD + CABECERA + CRC
 
 	while (1)
 	{
@@ -150,80 +146,14 @@ int main(void)
 			AUDIO_FFT_Data_Input(adc_buf, ADC_BUF_LEN, &audio_fft_M1);
 			AUDIO_FFT_Process(&audio_fft_M1, FFT_Out);
 
-//			float suma = 0.0;
 			int j=0;
 			for (int i = 0; i<(ADC_BUF_LEN); i++){
 //				FFT_now[i] = 20 * log(FFT_Out[i]/256);
 				FFT_filtrada[i] = (alpha *(20 * log(FFT_Out[i]/256))) + ((1 - alpha) * FFT_filtrada[i]);
 
-//				suma = suma + prueba[i];
 			}
 //			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_RESET);
 
-			//media = (suma + suma_ant) / 2;
-			//suma_ant = suma;
-
-//			switch (estado){
-//			case apagados:
-//				if ((suma<-107000.0f) & (suma>-110000.0f)){
-//					estado = principal_normal;
-//					strcpy(msg, "Principal Normal\r\n");
-//				}
-//				else if ((suma<-120000.0f) & (suma>-123000.0f)){
-//					estado = alimentacion_normal;
-//					strcpy(msg, "Alimentacion Normal\r\n");
-//				}
-//				else
-//					strcpy(msg, "Apagados\r\n");
-//				break;
-//
-//			case principal_normal:
-//				if ((suma<-97000.0f) & (suma>-102000.0f)){
-//					estado = principal_maximo;
-//					strcpy(msg, "Principal Maximo\r\n");
-//				}
-//				else if (suma<-130000.0f){
-//					estado = apagados;
-//					strcpy(msg, "Apagados\r\n");
-//				}
-//				else
-//					strcpy(msg, "Principal Normal\r\n");
-//				break;
-//
-//			case principal_maximo:
-//				if (suma<-109000.0f){
-//					estado = principal_normal;
-//					strcpy(msg, "Principal Normal\r\n");
-//				}
-//				else
-//					strcpy(msg, "Principal Maximo\r\n");
-//				break;
-//
-//			case alimentacion_normal:
-//				if ((suma<-103000.0f) & (suma>-106000.0f)){
-//					estado = alimentacion_maximo;
-//					strcpy(msg, "Alimentacion Maximo\r\n");
-//				}
-//				else if (suma<-130000.0f){
-//					estado = apagados;
-//					strcpy(msg, "Apagados\r\n");
-//				}
-//				else
-//					strcpy(msg, "Alimentacion Normal\r\n");
-//				break;
-//
-//			case alimentacion_maximo:
-//				if (suma<-120000.0f){
-//					estado = alimentacion_normal;
-//					strcpy(msg, "Alimentacion Normal\r\n");
-//				}
-//				else
-//					strcpy(msg, "Alimentacion Maximo\r\n");
-//				break;
-//
-//			}
-
-			//HAL_UART_Transmit(&huart2, &msg, strlen(msg), 100000000);
 
 			//Genera el mensaje a enviar
 			toSend[0] = 0x3e3e;											//CABECERA
@@ -235,14 +165,8 @@ int main(void)
 			HAL_UART_Transmit(&huart2, &toSend, sizeof(toSend), 100000000);
 			HAL_Delay(1);
 
-//			CDC_Transmit_FS(&msg, strlen(msg));
-//			HAL_Delay(1);
-
-			//MX_USB_DEVICE_Init();
-			//CDC_Transmit_FS(&toSend, sizeof(toSend));
 
 			HAL_ADC_Start_DMA(&hadc1, (int32_t*)adc_buf, ADC_BUF_LEN);
-//			HAL_Delay(10);
 			completo = 0;
 
 
@@ -728,17 +652,10 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void DMATransferComplete(DMA_HandleTypeDef *hdma) {
 
-	// Disable UART DMA mode
-//	huart2.Instance->CR3 &= ~USART_CR3_DMAT;
-
-	// Toggle LD2
-	HAL_GPIO_TogglePin(GPIOE, LED1_Pin);
 }
 //Called when first half of buffer is filled
 void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc){
-	// Toggle LD2
 
-//	completo = 1;
 }
 
 //Called when buffer is completely filled
